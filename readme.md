@@ -6,12 +6,16 @@ It will look in the provided input for matches against the `CVE-yyyy-ID` format 
 
 Hopefully it will help someone save at least a little bit of time.
 
+## Installation
+
+`go get github.com/sectorsect/cvelinker`
+
 ## Example Output
 
 This example takes input from the clipboard.
 
 ``` txt
-$ ./cvelinker
+$ cvelinker
 ========== CVE-2018-3640 Links ==========
 [NVD__] https://nvd.nist.gov/vuln/detail/CVE-2018-3640
 [MITRE] https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-3640
@@ -37,7 +41,7 @@ $ ./cvelinker
 ## Usage
 
 ``` txt
-Usage of ./cvelinker:
+Usage of cvelinker:
   -i, --input string
     	Pull CVEs from specified input file
   -o, --output string
