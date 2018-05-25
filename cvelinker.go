@@ -11,12 +11,16 @@ import (
 	flag "github.com/ogier/pflag"
 )
 
+var o levelOutput
+var online bool
+var circlAPI = "https://cve.circl.lu/api/cve/"
+
 func main() {
 	// declarations
+	var verbose bool
 	var cveInput string
 	var cveOutput string
-	var links []string
-	var builderData []cveLinkData = []cveLinkData{
+	var builderData = []cveLinkData{
 		cveLinkData{"NVD", "https://nvd.nist.gov/vuln/detail/"},
 		cveLinkData{"MITRE", "https://cve.mitre.org/cgi-bin/cvename.cgi?name="},
 		cveLinkData{"LVD", "https://lwn.net/Search/DoSearch?words="},
@@ -27,27 +31,34 @@ func main() {
 	}
 
 	// declare flags and parse
+	flag.BoolVarP(&online, "api-enabled", "a", false, "Gathers Extra information via API")
 	flag.StringVarP(&cveInput, "input", "i", "", "Pull CVEs from specified input file")
-	flag.StringVarP(&cveOutput, "output", "o", "", "Specify file to output formatted links to")
+	flag.StringVarP(&cveOutput, "output", "o", "", "Specify file to output formatted markdown report to")
+	flag.BoolVarP(&verbose, "verbose", "v", false, "Set verbose mode on")
 	flag.Parse()
+
+	if verbose {
+		o.Init(4, false, false)
+	} else {
+		o.Init(3, false, false)
+	}
+
+	cves := make(map[string]cve)
 
 	// deal with an input file flag
 	if len(cveInput) > 0 {
 		//attempt to open and read into buf
 		content, err := ioutil.ReadFile(cveInput)
 		if err != nil {
-			fmt.Println("[!] Error opening file for read: ")
-			fmt.Println(err)
+			o.Fatality.Fatalf("Error opening file for read: %s", err)
 			os.Exit(1)
 		}
 
-		// coerce buf into string
+		// ingest the cve tokens
 		strContent := string(content)
-
-		// ingest the tokens and add links for valid CVE IDs to the list
-		var cveTokens []string = ingestCveTokens(strContent)
+		var cveTokens = ingestCveTokens(strContent)
 		for _, argument := range cveTokens {
-			links = appendSlice(links, collectAllCveLinksAndFormat(argument, builderData))
+			cves = addUniqueCVE(cves, argument, builderData)
 		}
 
 	}
@@ -57,38 +68,30 @@ func main() {
 		// take from current clipboard
 		clipboardcontents, err := clipboard.ReadAll()
 		if err != nil {
-			fmt.Println("[!] Error reading from clipboard")
-			fmt.Println(err)
-			os.Exit(1)
+			o.Fatality.Fatalf("Error reading clipboard: %s", err)
 		}
 
 		// ingest the tokens and add links for valid CVE IDs to the list
-		var cveTokens []string = ingestCveTokens(clipboardcontents)
+		var cveTokens = ingestCveTokens(clipboardcontents)
 		for _, argument := range cveTokens {
-			links = appendSlice(links, collectAllCveLinksAndFormat(argument, builderData))
+			cves = addUniqueCVE(cves, argument, builderData)
 		}
 	} else { // Since there were excess arguments, treat each one as a potential cve ID
 		for _, argument := range flag.Args() {
 
 			// test uppercased arg for cve and add if valid, discard if not
-			upperargument := strings.ToUpper(argument)
-			if testTokenForCveNess(upperargument) {
-				links = appendSlice(links, collectAllCveLinksAndFormat(upperargument, builderData))
+			upperArgument := strings.ToUpper(argument)
+			if testTokenForCveNess(upperArgument) {
+				cves = addUniqueCVE(cves, upperArgument, builderData)
 			} else {
-				fmt.Println("[*] Discarded invalid argument: " + upperargument)
+				o.OverShare.Println("Discarded invalid argument: " + upperArgument)
 			}
 		}
 	}
 
 	// if output to file is set, open the default output path and overwrite everything
 	if len(cveOutput) > 0 {
-		outputstring := "\n"
-		for _, l := range links {
-			outputstring += l + "\n"
-		}
-
-		// coerce into bytes
-		var outputbytes = []byte(outputstring + "\n")
+		outputbytes := orchestrateMarkdownBuild(cves)
 
 		// open output file
 		fo, err := os.Create(cveOutput)
@@ -110,55 +113,42 @@ func main() {
 			panic(err)
 		}
 	} else { // if not write to file, just output the lines to stdout
-		for _, l := range links {
-			fmt.Println(l)
+		for _, c := range cves {
+			o.Print.Println(c.FormatOutputLines())
 		}
 	}
 }
 
-func collectAllCveLinksAndFormat(cve string, builderData []cveLinkData) []string {
-	// start off with a banner and the 'standard' links
-	lines := []string{"========== " + cve + " Links =========="}
-	lines = appendSlice(lines, buildLinksFromData(builderData, cve))
+func addUniqueCVE(cveMap map[string]cve, cveid string, builderData []cveLinkData) map[string]cve {
+	id := strings.ToUpper(cveid)
 
-	// deal with special cases
-	lines = appendSlice(lines, buildLinksForSpecialCases(cve))
-	lines = append(lines, "\n")
+	// skip if it already exists in the map
+	if _,ok := cveMap[id]; !ok {
+		cveMap[id] = collectAndBuildCveData(id, builderData)
+	}
 
-	return lines
+	return cveMap
 }
 
-// buildLinksFromData builds formatted output for a single cve.
-// It returns an array of string lines ready for output to file or console
-func buildLinksFromData(builderData []cveLinkData, cve string) []string {
-	lines := []string{}
+func orchestrateMarkdownBuild(cves map[string]cve) []byte {
+	lines := []byte("# CVE Evaluation Report\n\n")
 
-	// iterate the data array
-	for _, data := range builderData {
-		// build a sweet square bracket id for the link
-		line := "[" + data.name
-		for i := len(data.name); i < 5; i++ {
-			line += "_"
-		}
-		line += "] "
-
-		// create the link and append to the slice
-		line += data.url + cve
-		lines = append(lines, line)
+	for _, c := range cves {
+		lines = appendSlice(lines, c.FormatOutputMarkdown())
 	}
 
 	return lines
 }
 
-// buildLinksForSpecialCases handles building URLs which are not in the more standard prepend format
-func buildLinksForSpecialCases(cve string) []string {
-	var links = []string{}
+func collectAndBuildCveData(cvestr string, builderData []cveLinkData) cve {
 
-	// special case for github issue search
-	githubLink := "[GITHB] https://github.com/search?q=%22" + cve + "%22&type=Issues"
-	links = append(links, githubLink)
+	builder := cve{}
+	builder.Init(cvestr, builderData)
+	if online {
+		builder.PopulateCveDetails(circlAPI)
+	}
 
-	return links
+	return builder
 }
 
 // ingestCveTokens extracts all CVE IDs from a given input string.
@@ -166,24 +156,24 @@ func buildLinksForSpecialCases(cve string) []string {
 func ingestCveTokens(input string) []string {
 	re := regexp.MustCompile(`([cC][vV][eE]\-\d{4}\-\d{4,})`)
 	tokens := re.FindAllString(input, -1)
-	cves := []string{}
+	var cveIds []string
 
 	// iterate the tokens
 	for _, token := range tokens {
 		// convert to Upper cause all good vulns are uppercase
-		uppertoken := strings.ToUpper(token)
+		upperToken := strings.ToUpper(token)
 
 		// append if it is a cveid
-		if testTokenForCveNess(uppertoken) {
-			cves = append(cves, uppertoken)
+		if testTokenForCveNess(upperToken) {
+			cveIds = append(cveIds, upperToken)
 		}
 	}
-	return cves
+	return cveIds
 }
 
 // appendSlice appends the contents of a string array to another string array.
 // It returns the combined string array
-func appendSlice(frontSlice []string, rearSlice []string) []string {
+func appendSlice(frontSlice []byte, rearSlice []byte) []byte {
 	slice := frontSlice
 
 	for _, stringVal := range rearSlice {
@@ -198,10 +188,4 @@ func appendSlice(frontSlice []string, rearSlice []string) []string {
 func testTokenForCveNess(input string) bool {
 	var validCve = regexp.MustCompile(`CVE\-\d{4}\-\d{4,}`)
 	return validCve.MatchString(input)
-}
-
-// make an object for stuff so more info can be added later
-type cveLinkData struct {
-	name string
-	url  string
 }
