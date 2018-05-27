@@ -15,6 +15,23 @@ var o levelOutput
 var online bool
 var circlAPI = "https://cve.circl.lu/api/cve/"
 
+func sweetBanner() {
+	banner := `
+                               $$\ $$\           $$\                           
+                               $$ |\__|          $$ |                          
+ $$$$$$$\ $$\    $$\  $$$$$$\  $$ |$$\ $$$$$$$\  $$ |  $$\  $$$$$$\   $$$$$$\  
+$$  _____|\$$\  $$  |$$  __$$\ $$ |$$ |$$  __$$\ $$ | $$  |$$  __$$\ $$  __$$\ 
+$$ /       \$$\$$  / $$$$$$$$ |$$ |$$ |$$ |  $$ |$$$$$$  / $$$$$$$$ |$$ |  \__|
+$$ |        \$$$  /  $$   ____|$$ |$$ |$$ |  $$ |$$  _$$<  $$   ____|$$ |      
+\$$$$$$$\    \$  /   \$$$$$$$\ $$ |$$ |$$ |  $$ |$$ | \$$\ \$$$$$$$\ $$ |      
+ \_______|    \_/     \_______|\__|\__|\__|  \__|\__|  \__| \_______|\__| 
+
+Author:  Morgaine "sectorsect" Timms
+License: MIT
+`
+	fmt.Printf("%v\n", strings.Replace(banner, "$", o.blue.Sprintf("$"), -1))
+}
+
 func main() {
 	// declarations
 	var verbose bool
@@ -30,6 +47,14 @@ func main() {
 		cveLinkData{"GOOGL", "https://www.google.com/search?q="},
 	}
 
+	o.InitColours()
+
+	flag.Usage = func() {
+		sweetBanner()
+		fmt.Println("Things It Does:")
+		flag.PrintDefaults()
+	}
+
 	// declare flags and parse
 	flag.BoolVarP(&online, "api-enabled", "a", false, "Gathers Extra information via API")
 	flag.StringVarP(&cveInput, "input", "i", "", "Pull CVEs from specified input file")
@@ -42,6 +67,8 @@ func main() {
 	} else {
 		o.Init(3, false, false)
 	}
+
+	sweetBanner()
 
 	cves := make(map[string]cve)
 
@@ -89,6 +116,10 @@ func main() {
 		}
 	}
 
+	if len(cves) == 0 {
+		o.Warn.Fatalln("No CVE Data found.")
+	}
+
 	// if output to file is set, open the default output path and overwrite everything
 	if len(cveOutput) > 0 {
 		outputbytes := orchestrateMarkdownBuild(cves)
@@ -123,7 +154,7 @@ func addUniqueCVE(cveMap map[string]cve, cveid string, builderData []cveLinkData
 	id := strings.ToUpper(cveid)
 
 	// skip if it already exists in the map
-	if _,ok := cveMap[id]; !ok {
+	if _, ok := cveMap[id]; !ok {
 		cveMap[id] = collectAndBuildCveData(id, builderData)
 	}
 

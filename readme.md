@@ -1,5 +1,19 @@
 # CVElinker
 
+``` txt
+                               $$\ $$\           $$\
+                               $$ |\__|          $$ |
+ $$$$$$$\ $$\    $$\  $$$$$$\  $$ |$$\ $$$$$$$\  $$ |  $$\  $$$$$$\   $$$$$$\
+$$  _____|\$$\  $$  |$$  __$$\ $$ |$$ |$$  __$$\ $$ | $$  |$$  __$$\ $$  __$$\
+$$ /       \$$\$$  / $$$$$$$$ |$$ |$$ |$$ |  $$ |$$$$$$  / $$$$$$$$ |$$ |  \__|
+$$ |        \$$$  /  $$   ____|$$ |$$ |$$ |  $$ |$$  _$$<  $$   ____|$$ |
+\$$$$$$$\    \$  /   \$$$$$$$\ $$ |$$ |$$ |  $$ |$$ | \$$\ \$$$$$$$\ $$ |
+ \_______|    \_/     \_______|\__|\__|\__|  \__|\__|  \__| \_______|\__|
+
+Author:  Morgaine "sectorsect" Timms
+License: MIT
+```
+
 I threw this together to make it easier to dig through advisory bulletins that name CVEs but don't link to any further information on them.
 
 It will look in the provided input for matches against the `CVE-yyyy-ID` format ignoring case.
@@ -17,7 +31,7 @@ CVElinker will read the clipboard and extract CVE IDs.
 If network mode is enabled with `-a`, data from the CIRCL CVE-Search api will be included in the output.
 
 ```
-Usage of cvelinker:
+Things It Does:
   -a, --api-enabled
     	Gathers Extra information via API
   -i, --input string
@@ -34,10 +48,10 @@ CVELinker will output to stdout by default, or a markdown file optionally.
 
 [Example Markdown Report Link](exampleReport.md)
 
-example CLI output with networking enabled:
+example CLI output with api-calls enabled:
 
 ```
-$ ./cvelinker -a
+
 ========================= CVE-2018-3640 ==========================
 Published: 2018-05-22T08:29:00.327000
 Modified:  2018-05-22T08:29:00.343000
