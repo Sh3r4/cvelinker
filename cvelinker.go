@@ -26,7 +26,7 @@ $$ |        \$$$  /  $$   ____|$$ |$$ |$$ |  $$ |$$  _$$<  $$   ____|$$ |
 \$$$$$$$\    \$  /   \$$$$$$$\ $$ |$$ |$$ |  $$ |$$ | \$$\ \$$$$$$$\ $$ |      
  \_______|    \_/     \_______|\__|\__|\__|  \__|\__|  \__| \_______|\__| 
 
-Author:  Morgaine "sectorsect" Timms
+Author:  @sectorsect
 License: MIT
 `
 	fmt.Printf("%v\n", strings.Replace(banner, "$", o.blue.Sprintf("$"), -1))
