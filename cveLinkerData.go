@@ -156,7 +156,7 @@ func (c *cve) FormatOutputMarkdown() []byte {
 		for i := len(l.name); i < 5; i++ {
 			lineID += "-"
 		}
-		lines += "* [" + lineID + "> " + l.url + "](" + l.url + ")\n"
+		lines += "* [" + lineID + "> " + l.url + strings.ToUpper(c.id) + "](" + l.url + strings.ToUpper(c.id) + ")\n"
 
 	}
 	lines += "\n"
